@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""
+Garage Door Monitor Launcher
+Starts both the web server and photo scheduler
+"""
+
+import subprocess
+import sys
+import time
+import signal
+import os
+from threading import Thread
+
+class MonitorLauncher:
+    def __init__(self):
+        self.web_server_process = None
+        self.photo_scheduler_process = None
+        self.running = False
+    
+    def start_web_server(self):
+        """Start the Flask web server"""
+        print("🌐 Starting web server...")
+        try:
+            self.web_server_process = subprocess.Popen([
+                sys.executable, 'app.py'
+            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print("✅ Web server started")
+            return True
+        except Exception as e:
+            print(f"❌ Failed to start web server: {e}")
+            return False
+    
+    def start_photo_scheduler(self):
+        """Start the photo scheduler"""
+        print("📸 Starting photo scheduler...")
+        try:
+            self.photo_scheduler_process = subprocess.Popen([
+                sys.executable, 'photo_scheduler.py'
+            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print("✅ Photo scheduler started")
+            return True
+        except Exception as e:
+            print(f"❌ Failed to start photo scheduler: {e}")
+            return False
+    
+    def stop_all(self):
+        """Stop all processes"""
+        print("\n🛑 Stopping all services...")
+        self.running = False
+        
+        if self.web_server_process:
+            self.web_server_process.terminate()
+            print("🌐 Web server stopped")
+        
+        if self.photo_scheduler_process:
+            self.photo_scheduler_process.terminate()
+            print("📸 Photo scheduler stopped")
+    
+    def signal_handler(self, signum, frame):
+        """Handle shutdown signals"""
+        print(f"\n🛑 Received signal {signum}, shutting down...")
+        self.stop_all()
+        sys.exit(0)
+    
+    def run(self):
+        """Run the complete garage door monitor system"""
+        print("🚗 Garage Door Monitor - Starting Complete System")
+        print("=" * 60)
+        
+        # Set up signal handlers
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
+        
+        # Start web server
+        if not self.start_web_server():
+            print("❌ Cannot start without web server")
+            return False
+        
+        # Start photo scheduler
+        if not self.start_photo_scheduler():
+            print("⚠️  Photo scheduler failed to start, continuing with web server only")
+        
+        self.running = True
+        
+        print("\n🎉 Garage Door Monitor is running!")
+        print("=" * 40)
+        print("📱 Web Interface: http://[PI_IP]:5000")
+        print("📸 Photos will be saved to: ./photos/")
+        print("📊 Check logs for status updates")
+        print("\n🛑 Press Ctrl+C to stop all services")
+        print()
+        
+        try:
+            # Monitor processes
+            while self.running:
+                # Check if web server is still running
+                if self.web_server_process and self.web_server_process.poll() is not None:
+                    print("❌ Web server stopped unexpectedly")
+                    break
+                
+                # Check if photo scheduler is still running
+                if self.photo_scheduler_process and self.photo_scheduler_process.poll() is not None:
+                    print("⚠️  Photo scheduler stopped unexpectedly")
+                    # Don't break, continue with web server only
+                
+                time.sleep(5)  # Check every 5 seconds
+                
+        except KeyboardInterrupt:
+            pass
+        finally:
+            self.stop_all()
+            print("✅ All services stopped")
+
+def main():
+    """Main function"""
+    launcher = MonitorLauncher()
+    launcher.run()
+
+if __name__ == "__main__":
+    main()
+
+

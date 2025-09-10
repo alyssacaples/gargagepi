@@ -49,3 +49,4 @@ photos/
 
 # Camera test files
 test_camera.py
+photo_metadata.json

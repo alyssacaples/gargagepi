@@ -39,11 +39,29 @@ class MonitorLauncher:
         """Start the Flask web server"""
         print("🌐 Starting web server...")
         try:
+            # Use unbuffered output and proper working directory
             self.web_server_process = subprocess.Popen([
-                sys.executable, 'app.py'
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            print("✅ Web server started")
-            return True
+                sys.executable, '-u', 'app.py'  # -u for unbuffered output
+            ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+               universal_newlines=True, bufsize=1)
+            
+            # Give it a moment to start
+            time.sleep(2)
+            
+            # Check if it's still running
+            if self.web_server_process.poll() is None:
+                print("✅ Web server started successfully")
+                return True
+            else:
+                # Get any error output
+                stdout, stderr = self.web_server_process.communicate()
+                print(f"❌ Web server failed to start")
+                if stdout:
+                    print(f"Output: {stdout}")
+                if stderr:
+                    print(f"Error: {stderr}")
+                return False
+                
         except Exception as e:
             print(f"❌ Failed to start web server: {e}")
             return False
@@ -52,11 +70,29 @@ class MonitorLauncher:
         """Start the photo scheduler"""
         print("📸 Starting photo scheduler...")
         try:
+            # Use unbuffered output
             self.photo_scheduler_process = subprocess.Popen([
-                sys.executable, 'photo_scheduler.py'
-            ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            print("✅ Photo scheduler started")
-            return True
+                sys.executable, '-u', 'photo_scheduler.py'
+            ], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+               universal_newlines=True, bufsize=1)
+            
+            # Give it a moment to start
+            time.sleep(1)
+            
+            # Check if it's still running
+            if self.photo_scheduler_process.poll() is None:
+                print("✅ Photo scheduler started successfully")
+                return True
+            else:
+                # Get any error output
+                stdout, stderr = self.photo_scheduler_process.communicate()
+                print(f"❌ Photo scheduler failed to start")
+                if stdout:
+                    print(f"Output: {stdout}")
+                if stderr:
+                    print(f"Error: {stderr}")
+                return False
+                
         except Exception as e:
             print(f"❌ Failed to start photo scheduler: {e}")
             return False
@@ -85,6 +121,11 @@ class MonitorLauncher:
         print("🚗 Garage Door Monitor - Starting Complete System")
         print("=" * 60)
         
+        # Debug info
+        print(f"🐍 Python executable: {sys.executable}")
+        print(f"📁 Working directory: {os.getcwd()}")
+        print(f"📋 Files in directory: {os.listdir('.')}")
+        
         # Set up signal handlers
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
@@ -92,6 +133,7 @@ class MonitorLauncher:
         # Start web server
         if not self.start_web_server():
             print("❌ Cannot start without web server")
+            print("💡 Try running 'python3 app.py' directly to see the error")
             return False
         
         # Start photo scheduler

@@ -15,14 +15,31 @@ import logging
 import requests
 
 # Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('photo_scheduler.log'),
-        logging.StreamHandler()
-    ]
-)
+def setup_logging():
+    """Set up logging configuration"""
+    # Clear any existing handlers
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    
+    # Create formatter
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    
+    # File handler
+    file_handler = logging.FileHandler('photo_scheduler.log')
+    file_handler.setFormatter(formatter)
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    
+    # Configure root logger
+    logging.basicConfig(
+        level=logging.INFO,
+        handlers=[file_handler, console_handler]
+    )
+
+# Set up logging
+setup_logging()
 
 class PhotoScheduler:
     def __init__(self):
@@ -184,6 +201,9 @@ class PhotoScheduler:
                 current_interval = self.get_current_interval()
                 
                 # Run pending scheduled jobs
+                jobs = schedule.get_jobs()
+                if jobs:
+                    logging.debug(f"⏰ Checking {len(jobs)} scheduled jobs...")
                 schedule.run_pending()
                 
                 # Clear test photos after they've been taken (after 2 minutes)
@@ -225,8 +245,14 @@ class PhotoScheduler:
 
 def main():
     """Main function to run the photo scheduler"""
+    # Ensure logging is set up
+    setup_logging()
+    
     print("📸 Garage Door Monitor - Photo Scheduler")
     print("=" * 50)
+    
+    # Log startup
+    logging.info("🚀 Photo scheduler starting up...")
     
     scheduler = PhotoScheduler()
     
@@ -250,6 +276,10 @@ def main():
     print("📡 Using Flask app's camera API for photo capture")
     print("🛑 Press Ctrl+C to stop")
     print()
+    
+    # Log schedule setup
+    logging.info("📅 Photo schedule configured with test photos at 45s and 90s")
+    logging.info(f"📊 Starting with {stats['total_photos']} existing photos")
     
     try:
         # Run the scheduler

@@ -12,6 +12,7 @@ from datetime import datetime, time as dt_time
 import os
 import json
 import logging
+import requests
 
 # Set up logging
 logging.basicConfig(
@@ -31,6 +32,7 @@ class PhotoScheduler:
         self.photo_count = 0
         self.photos_dir = "photos"
         self.metadata_file = "photo_metadata.json"
+        self.web_server_url = "http://localhost:5000"
         
         # Create photos directory
         os.makedirs(self.photos_dir, exist_ok=True)
@@ -60,70 +62,63 @@ class PhotoScheduler:
         except Exception as e:
             logging.error(f"Failed to save metadata: {e}")
     
-    def initialize_camera(self):
-        """Initialize the USB camera"""
-        logging.info("🔍 Initializing camera for photo scheduler...")
-        
-        # Try to find working camera
-        for i in range(3):
-            logging.info(f"Trying camera index {i}...")
-            cap = cv2.VideoCapture(i)
-            if cap.isOpened():
-                ret, frame = cap.read()
-                if ret and frame is not None:
-                    self.camera = cap
-                    self.camera_index = i
-                    logging.info(f"✅ Camera found at index {i}")
-                    return True
-                else:
-                    cap.release()
+    def check_web_server(self):
+        """Check if the web server is running and accessible"""
+        try:
+            response = requests.get(f"{self.web_server_url}/status", timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                logging.info(f"✅ Web server is running, camera connected: {data.get('camera_connected', False)}")
+                return data.get('camera_connected', False)
             else:
-                cap.release()
-        
-        logging.error("❌ No working camera found!")
-        return False
+                logging.warning(f"⚠️ Web server responded with status {response.status_code}")
+                return False
+        except requests.exceptions.RequestException as e:
+            logging.error(f"❌ Cannot connect to web server: {e}")
+            return False
     
     def capture_photo(self, reason="scheduled"):
-        """Capture a photo and save with metadata"""
-        if not self.camera:
-            if not self.initialize_camera():
-                logging.error("Cannot capture photo - camera not available")
-                return False
-        
+        """Capture a photo using the Flask app's camera API"""
         try:
-            ret, frame = self.camera.read()
-            if ret and frame is not None:
-                # Generate filename with timestamp
-                timestamp = datetime.now()
-                filename = f"garage_{timestamp.strftime('%Y%m%d_%H%M%S')}.jpg"
-                filepath = os.path.join(self.photos_dir, filename)
-                
-                # Save photo
-                cv2.imwrite(filepath, frame)
-                
-                # Update metadata
-                self.photo_count += 1
-                date_str = timestamp.strftime('%Y-%m-%d')
-                
-                if date_str not in self.metadata['photos_by_date']:
-                    self.metadata['photos_by_date'][date_str] = 0
-                self.metadata['photos_by_date'][date_str] += 1
-                
-                self.metadata['total_photos'] = self.photo_count
-                self.metadata['last_capture'] = timestamp.isoformat()
-                
-                # Save metadata
-                self.save_metadata()
-                
-                # Log success
-                logging.info(f"📸 Photo captured: {filename} (Reason: {reason})")
-                logging.info(f"📊 Total photos: {self.photo_count}")
-                
-                return True
+            # Use the Flask app's capture endpoint
+            response = requests.get(f"{self.web_server_url}/capture", timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('success', False):
+                    # The Flask app already saved the photo, we just need to update our metadata
+                    filename = data.get('filename', 'unknown.jpg')
+                    timestamp = datetime.now()
+                    
+                    # Update metadata
+                    self.photo_count += 1
+                    date_str = timestamp.strftime('%Y-%m-%d')
+                    
+                    if date_str not in self.metadata['photos_by_date']:
+                        self.metadata['photos_by_date'][date_str] = 0
+                    self.metadata['photos_by_date'][date_str] += 1
+                    
+                    self.metadata['total_photos'] = self.photo_count
+                    self.metadata['last_capture'] = timestamp.isoformat()
+                    
+                    # Save metadata
+                    self.save_metadata()
+                    
+                    # Log success
+                    logging.info(f"📸 Photo captured via API: {filename} (Reason: {reason})")
+                    logging.info(f"📊 Total photos: {self.photo_count}")
+                    
+                    return True
+                else:
+                    logging.error(f"Flask app capture failed: {data.get('error', 'Unknown error')}")
+                    return False
             else:
-                logging.error("Failed to capture frame from camera")
+                logging.error(f"Failed to capture photo via API: HTTP {response.status_code}")
                 return False
                 
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error connecting to Flask app for photo capture: {e}")
+            return False
         except Exception as e:
             logging.error(f"Error capturing photo: {e}")
             return False
@@ -162,15 +157,20 @@ class PhotoScheduler:
     
     def run_scheduler(self):
         """Run the photo scheduler"""
-        if not self.initialize_camera():
-            logging.error("Cannot start scheduler - camera not available")
+        if not self.check_web_server():
+            logging.error("Cannot start scheduler - web server not available or camera not connected")
             return
         
         self.is_running = True
-        logging.info("🚀 Photo scheduler started!")
+        logging.info("🚀 Photo scheduler started! Using Flask app's camera API")
         
         try:
             while self.is_running:
+                # Check if web server is still available
+                if not self.check_web_server():
+                    logging.error("Web server became unavailable, stopping scheduler")
+                    break
+                
                 # Check current time and adjust schedule if needed
                 current_interval = self.get_current_interval()
                 
@@ -190,8 +190,7 @@ class PhotoScheduler:
     def stop_scheduler(self):
         """Stop the photo scheduler"""
         self.is_running = False
-        if self.camera:
-            self.camera.release()
+        # No need to release camera since we're using the Flask app's camera
         logging.info("📸 Photo scheduler stopped")
     
     def get_stats(self):
@@ -229,6 +228,7 @@ def main():
     print("   - 4:00-7:00 PM: Every 5 minutes") 
     print("   - All other times: Every 15 minutes")
     print()
+    print("📡 Using Flask app's camera API for photo capture")
     print("🛑 Press Ctrl+C to stop")
     print()
     

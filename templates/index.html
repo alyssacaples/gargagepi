@@ -436,6 +436,7 @@
 
     <script>
         let statusCheckInterval;
+        let galleryRefreshInterval;
         
         // Check system status
         async function checkStatus() {
@@ -544,10 +545,30 @@
             // Load photos if gallery tab is selected
             if (tabName === 'gallery') {
                 loadPhotos();
+                // Start auto-refresh every 30 seconds when gallery is active
+                startGalleryAutoRefresh();
+            } else {
+                // Stop auto-refresh when switching away from gallery
+                stopGalleryAutoRefresh();
+            }
+        }
+        
+        function startGalleryAutoRefresh() {
+            stopGalleryAutoRefresh(); // Clear any existing interval
+            galleryRefreshInterval = setInterval(loadPhotos, 30000); // Refresh every 30 seconds
+            console.log('🔄 Gallery auto-refresh started (every 30 seconds)');
+        }
+        
+        function stopGalleryAutoRefresh() {
+            if (galleryRefreshInterval) {
+                clearInterval(galleryRefreshInterval);
+                galleryRefreshInterval = null;
+                console.log('⏹️ Gallery auto-refresh stopped');
             }
         }
         
         // Photo gallery functionality
+        
         async function loadPhotos() {
             const galleryGrid = document.getElementById('galleryGrid');
             const photoCount = document.getElementById('photoCount');
@@ -558,7 +579,8 @@
             galleryGrid.innerHTML = '<div class="loading" id="galleryLoading"><p>🔄 Loading photos...</p></div>';
             
             try {
-                const response = await fetch('/api/photos');
+                // Add timestamp to prevent caching
+                const response = await fetch(`/api/photos?t=${Date.now()}`);
                 const data = await response.json();
                 
                 if (data.error) {
@@ -641,6 +663,9 @@
         window.addEventListener('beforeunload', function() {
             if (statusCheckInterval) {
                 clearInterval(statusCheckInterval);
+            }
+            if (galleryRefreshInterval) {
+                clearInterval(galleryRefreshInterval);
             }
         });
     </script>

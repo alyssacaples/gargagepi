@@ -171,7 +171,7 @@ def get_photos():
                 stat = os.stat(filepath)
                 photo_files.append({
                     'filename': filename,
-                    'path': f'/photos/{filename}',
+                    'path': f'/photos/{filename}?t={int(stat.st_mtime)}',  # Add timestamp to prevent caching
                     'size': stat.st_size,
                     'modified': datetime.fromtimestamp(stat.st_mtime).isoformat(),
                     'date': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d'),
@@ -187,9 +187,13 @@ def get_photos():
 
 @app.route('/photos/<filename>')
 def serve_photo(filename):
-    """Serve individual photos"""
-    from flask import send_from_directory
-    return send_from_directory('photos', filename)
+    """Serve individual photos with no-cache headers"""
+    from flask import send_from_directory, make_response
+    response = make_response(send_from_directory('photos', filename))
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
 
 def get_local_ip():
     """Get the local IP address of the Raspberry Pi"""

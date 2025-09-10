@@ -343,6 +343,11 @@
             font-size: 1.1em;
         }
         
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 2em;
@@ -419,7 +424,7 @@
                 <div class="gallery-container">
                     <h2>📸 Photo Gallery</h2>
                     <div class="gallery-controls">
-                        <button class="btn btn-primary" onclick="loadPhotos()">🔄 Refresh Gallery</button>
+                        <button class="btn btn-primary" id="refreshBtn" onclick="refreshGallery()">🔄 Refresh Gallery</button>
                         <div class="gallery-stats" id="galleryStats">
                             <span id="photoCount">Loading...</span>
                         </div>
@@ -569,7 +574,27 @@
         
         // Photo gallery functionality
         
+        async function refreshGallery() {
+            console.log('🔄 Manual refresh triggered');
+            const refreshBtn = document.getElementById('refreshBtn');
+            
+            // Disable button and show loading state
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = '⏳ Refreshing...';
+            
+            try {
+                await loadPhotos();
+            } finally {
+                // Re-enable button
+                setTimeout(() => {
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = '🔄 Refresh Gallery';
+                }, 1000);
+            }
+        }
+        
         async function loadPhotos() {
+            console.log('🔄 Loading photos...');
             const galleryGrid = document.getElementById('galleryGrid');
             const photoCount = document.getElementById('photoCount');
             const galleryLoading = document.getElementById('galleryLoading');
@@ -580,25 +605,39 @@
             
             try {
                 // Add timestamp to prevent caching
-                const response = await fetch(`/api/photos?t=${Date.now()}`);
+                const apiUrl = `/api/photos?t=${Date.now()}`;
+                console.log('📡 Fetching from:', apiUrl);
+                
+                const response = await fetch(apiUrl);
+                console.log('📡 Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const data = await response.json();
+                console.log('📡 API response:', data);
                 
                 if (data.error) {
                     throw new Error(data.error);
                 }
                 
                 const photos = data.photos || [];
+                console.log(`📸 Found ${photos.length} photos`);
                 photoCount.textContent = `${photos.length} photos`;
                 
                 if (photos.length === 0) {
+                    console.log('📷 No photos found');
                     galleryGrid.innerHTML = '<div class="no-photos"><p>📷 No photos found. Take some photos to see them here!</p></div>';
                     return;
                 }
                 
                 // Clear loading and create photo grid
                 galleryGrid.innerHTML = '';
+                console.log('🖼️ Creating photo grid...');
                 
-                photos.forEach(photo => {
+                photos.forEach((photo, index) => {
+                    console.log(`📸 Adding photo ${index + 1}: ${photo.filename}`);
                     const photoItem = document.createElement('div');
                     photoItem.className = 'photo-item';
                     photoItem.innerHTML = `
@@ -614,8 +653,10 @@
                     galleryGrid.appendChild(photoItem);
                 });
                 
+                console.log('✅ Photo gallery loaded successfully');
+                
             } catch (error) {
-                console.error('Error loading photos:', error);
+                console.error('❌ Error loading photos:', error);
                 galleryGrid.innerHTML = '<div class="error-message"><p>❌ Error loading photos: ' + error.message + '</p></div>';
                 photoCount.textContent = 'Error loading photos';
             }

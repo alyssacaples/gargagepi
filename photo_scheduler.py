@@ -145,6 +145,10 @@ class PhotoScheduler:
         # Clear existing schedule
         schedule.clear()
         
+        # Schedule test photos for immediate verification
+        schedule.every(45).seconds.do(self.capture_photo, reason="test_45s").tag("test")
+        schedule.every(90).seconds.do(self.capture_photo, reason="test_90s").tag("test")
+        
         # Schedule photos every 5 minutes during high-activity periods
         schedule.every(5).minutes.do(self.capture_photo, reason="high_frequency").tag("high_freq")
         
@@ -152,6 +156,7 @@ class PhotoScheduler:
         schedule.every(15).minutes.do(self.capture_photo, reason="low_frequency").tag("low_freq")
         
         logging.info("✅ Photo schedule configured:")
+        logging.info("   - Test photos: 45 seconds and 90 seconds after start")
         logging.info("   - 5 minutes: 7:00-9:30 AM and 4:00-7:00 PM")
         logging.info("   - 15 minutes: All other times")
     
@@ -163,6 +168,10 @@ class PhotoScheduler:
         
         self.is_running = True
         logging.info("🚀 Photo scheduler started! Using Flask app's camera API")
+        
+        # Track test photos
+        test_photos_taken = 0
+        start_time = time.time()
         
         try:
             while self.is_running:
@@ -176,6 +185,16 @@ class PhotoScheduler:
                 
                 # Run pending scheduled jobs
                 schedule.run_pending()
+                
+                # Clear test photos after they've been taken (after 2 minutes)
+                elapsed_time = time.time() - start_time
+                if elapsed_time > 120 and test_photos_taken < 2:
+                    logging.info("🧹 Clearing test photo schedules after 2 minutes")
+                    schedule.clear()
+                    # Re-add only the regular schedules
+                    schedule.every(5).minutes.do(self.capture_photo, reason="high_frequency").tag("high_freq")
+                    schedule.every(15).minutes.do(self.capture_photo, reason="low_frequency").tag("low_freq")
+                    test_photos_taken = 2  # Mark as completed
                 
                 # Sleep for a short time to avoid busy waiting
                 time.sleep(1)
@@ -224,6 +243,7 @@ def main():
     print()
     
     print("🕐 Schedule:")
+    print("   - Test photos: 45 seconds and 90 seconds after start")
     print("   - 7:00-9:30 AM: Every 5 minutes")
     print("   - 4:00-7:00 PM: Every 5 minutes") 
     print("   - All other times: Every 15 minutes")

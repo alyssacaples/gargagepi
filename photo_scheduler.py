@@ -190,11 +190,10 @@ class PhotoScheduler:
                 elapsed_time = time.time() - start_time
                 if elapsed_time > 120 and test_photos_taken < 2:
                     logging.info("🧹 Clearing test photo schedules after 2 minutes")
-                    schedule.clear()
-                    # Re-add only the regular schedules
-                    schedule.every(5).minutes.do(self.capture_photo, reason="high_frequency").tag("high_freq")
-                    schedule.every(15).minutes.do(self.capture_photo, reason="low_frequency").tag("low_freq")
+                    # Clear only test schedules, not all schedules
+                    schedule.clear(tag="test")
                     test_photos_taken = 2  # Mark as completed
+                    logging.info("✅ Test schedules cleared, regular schedules continue")
                 
                 # Sleep for a short time to avoid busy waiting
                 time.sleep(1)

@@ -150,6 +150,47 @@ def status():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/gallery')
+def gallery():
+    """Photo gallery page"""
+    return render_template('index.html', active_tab='gallery')
+
+@app.route('/api/photos')
+def get_photos():
+    """Get list of all photos"""
+    photos_dir = "photos"
+    if not os.path.exists(photos_dir):
+        return jsonify({'photos': []})
+    
+    try:
+        # Get all jpg files and sort by modification time (newest first)
+        photo_files = []
+        for filename in os.listdir(photos_dir):
+            if filename.lower().endswith(('.jpg', '.jpeg', '.png')):
+                filepath = os.path.join(photos_dir, filename)
+                stat = os.stat(filepath)
+                photo_files.append({
+                    'filename': filename,
+                    'path': f'/photos/{filename}',
+                    'size': stat.st_size,
+                    'modified': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    'date': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d'),
+                    'time': datetime.fromtimestamp(stat.st_mtime).strftime('%H:%M:%S')
+                })
+        
+        # Sort by modification time (newest first)
+        photo_files.sort(key=lambda x: x['modified'], reverse=True)
+        
+        return jsonify({'photos': photo_files})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/photos/<filename>')
+def serve_photo(filename):
+    """Serve individual photos"""
+    from flask import send_from_directory
+    return send_from_directory('photos', filename)
+
 def get_local_ip():
     """Get the local IP address of the Raspberry Pi"""
     try:

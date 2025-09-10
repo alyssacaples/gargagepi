@@ -168,6 +168,181 @@
             display: block;
         }
         
+        /* Tab Navigation */
+        .tab-navigation {
+            display: flex;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 5px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-size: 1.1em;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        /* Tab Content */
+        .tab-content {
+            position: relative;
+        }
+        
+        .tab-panel {
+            display: none;
+        }
+        
+        .tab-panel.active {
+            display: block;
+        }
+        
+        /* Gallery Styles */
+        .gallery-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .gallery-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .gallery-stats {
+            color: #666;
+            font-weight: 600;
+        }
+        
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .photo-item {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .photo-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .photo-item img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+        
+        .photo-info {
+            padding: 15px;
+        }
+        
+        .photo-filename {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+        
+        .photo-details {
+            font-size: 0.9em;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .photo-date {
+            font-weight: 500;
+        }
+        
+        .photo-time {
+            opacity: 0.8;
+        }
+        
+        /* Modal for full-size photo */
+        .photo-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            cursor: pointer;
+        }
+        
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 90%;
+            max-height: 90%;
+        }
+        
+        .modal-content img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .modal-close:hover {
+            color: #ccc;
+        }
+        
+        .no-photos {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.1em;
+        }
+        
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 2em;
@@ -212,19 +387,49 @@
             </div>
         </div>
         
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" onclick="showTab('live')" id="liveTab">📺 Live Stream</button>
+            <button class="tab-btn" onclick="showTab('gallery')" id="galleryTab">📸 Photo Gallery</button>
+        </div>
+        
         <div class="error-message" id="errorMessage">
             <strong>Error:</strong> <span id="errorText"></span>
         </div>
         
-        <div class="video-container">
-            <h2>📺 Live Camera Feed</h2>
-            <div class="loading" id="loading">
-                <p>🔄 Loading camera stream...</p>
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Live Stream Tab -->
+            <div class="tab-panel active" id="liveTabContent">
+                <div class="video-container">
+                    <h2>📺 Live Camera Feed</h2>
+                    <div class="loading" id="loading">
+                        <p>🔄 Loading camera stream...</p>
+                    </div>
+                    <img id="videoStream" src="/stream" alt="Live camera feed" style="display: none;">
+                    <div class="controls">
+                        <button class="btn btn-primary" onclick="refreshStream()">🔄 Refresh Stream</button>
+                        <button class="btn btn-success" onclick="capturePhoto()">📸 Capture Photo</button>
+                    </div>
+                </div>
             </div>
-            <img id="videoStream" src="/stream" alt="Live camera feed" style="display: none;">
-            <div class="controls">
-                <button class="btn btn-primary" onclick="refreshStream()">🔄 Refresh Stream</button>
-                <button class="btn btn-success" onclick="capturePhoto()">📸 Capture Photo</button>
+            
+            <!-- Photo Gallery Tab -->
+            <div class="tab-panel" id="galleryTabContent">
+                <div class="gallery-container">
+                    <h2>📸 Photo Gallery</h2>
+                    <div class="gallery-controls">
+                        <button class="btn btn-primary" onclick="loadPhotos()">🔄 Refresh Gallery</button>
+                        <div class="gallery-stats" id="galleryStats">
+                            <span id="photoCount">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="gallery-grid" id="galleryGrid">
+                        <div class="loading" id="galleryLoading">
+                            <p>🔄 Loading photos...</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -319,6 +524,118 @@
                 loading.classList.remove('show');
             }, 2000);
         });
+        
+        // Tab switching functionality
+        function showTab(tabName) {
+            // Hide all tab panels
+            const panels = document.querySelectorAll('.tab-panel');
+            panels.forEach(panel => panel.classList.remove('active'));
+            
+            // Remove active class from all tab buttons
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            // Show selected tab panel
+            document.getElementById(tabName + 'TabContent').classList.add('active');
+            
+            // Add active class to selected tab button
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            // Load photos if gallery tab is selected
+            if (tabName === 'gallery') {
+                loadPhotos();
+            }
+        }
+        
+        // Photo gallery functionality
+        async function loadPhotos() {
+            const galleryGrid = document.getElementById('galleryGrid');
+            const photoCount = document.getElementById('photoCount');
+            const galleryLoading = document.getElementById('galleryLoading');
+            
+            // Show loading
+            galleryLoading.style.display = 'block';
+            galleryGrid.innerHTML = '<div class="loading" id="galleryLoading"><p>🔄 Loading photos...</p></div>';
+            
+            try {
+                const response = await fetch('/api/photos');
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                const photos = data.photos || [];
+                photoCount.textContent = `${photos.length} photos`;
+                
+                if (photos.length === 0) {
+                    galleryGrid.innerHTML = '<div class="no-photos"><p>📷 No photos found. Take some photos to see them here!</p></div>';
+                    return;
+                }
+                
+                // Clear loading and create photo grid
+                galleryGrid.innerHTML = '';
+                
+                photos.forEach(photo => {
+                    const photoItem = document.createElement('div');
+                    photoItem.className = 'photo-item';
+                    photoItem.innerHTML = `
+                        <img src="${photo.path}" alt="${photo.filename}" onclick="openPhotoModal('${photo.path}', '${photo.filename}')">
+                        <div class="photo-info">
+                            <div class="photo-filename">${photo.filename}</div>
+                            <div class="photo-details">
+                                <span class="photo-date">${photo.date}</span>
+                                <span class="photo-time">${photo.time}</span>
+                            </div>
+                        </div>
+                    `;
+                    galleryGrid.appendChild(photoItem);
+                });
+                
+            } catch (error) {
+                console.error('Error loading photos:', error);
+                galleryGrid.innerHTML = '<div class="error-message"><p>❌ Error loading photos: ' + error.message + '</p></div>';
+                photoCount.textContent = 'Error loading photos';
+            }
+        }
+        
+        // Photo modal functionality
+        function openPhotoModal(imageSrc, filename) {
+            // Create modal if it doesn't exist
+            let modal = document.getElementById('photoModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'photoModal';
+                modal.className = 'photo-modal';
+                modal.innerHTML = `
+                    <span class="modal-close" onclick="closePhotoModal()">&times;</span>
+                    <div class="modal-content">
+                        <img src="" alt="">
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                // Close modal when clicking outside
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        closePhotoModal();
+                    }
+                });
+            }
+            
+            // Set image and show modal
+            const modalImg = modal.querySelector('img');
+            modalImg.src = imageSrc;
+            modalImg.alt = filename;
+            modal.style.display = 'block';
+        }
+        
+        function closePhotoModal() {
+            const modal = document.getElementById('photoModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
         
         // Cleanup on page unload
         window.addEventListener('beforeunload', function() {

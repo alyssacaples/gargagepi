@@ -9,7 +9,25 @@ import sys
 import time
 import signal
 import os
+import socket
 from threading import Thread
+
+def get_local_ip():
+    """Get the local IP address of the Raspberry Pi"""
+    try:
+        # Connect to a remote address to determine local IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except:
+        # Fallback method
+        try:
+            result = subprocess.run(['hostname', '-I'], capture_output=True, text=True)
+            return result.stdout.strip().split()[0]
+        except:
+            return "localhost"
 
 class MonitorLauncher:
     def __init__(self):
@@ -82,9 +100,13 @@ class MonitorLauncher:
         
         self.running = True
         
+        # Get the Pi's IP address
+        pi_ip = get_local_ip()
+        
         print("\n🎉 Garage Door Monitor is running!")
         print("=" * 40)
-        print("📱 Web Interface: http://[PI_IP]:5000")
+        print(f"📱 Web Interface: http://{pi_ip}:5000")
+        print(f"💡 Your Pi's IP address: {pi_ip}")
         print("📸 Photos will be saved to: ./photos/")
         print("📊 Check logs for status updates")
         print("\n🛑 Press Ctrl+C to stop all services")

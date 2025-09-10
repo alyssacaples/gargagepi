@@ -10,6 +10,7 @@ import time
 from flask import Flask, render_template, Response, jsonify
 from datetime import datetime
 import os
+import socket
 
 app = Flask(__name__)
 
@@ -149,19 +150,41 @@ def status():
         'timestamp': datetime.now().isoformat()
     })
 
+def get_local_ip():
+    """Get the local IP address of the Raspberry Pi"""
+    try:
+        # Connect to a remote address to determine local IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except:
+        # Fallback method
+        try:
+            import subprocess
+            result = subprocess.run(['hostname', '-I'], capture_output=True, text=True)
+            return result.stdout.strip().split()[0]
+        except:
+            return "localhost"
+
 if __name__ == '__main__':
     print("🚗 Starting Garage Door Monitor Web Server...")
     print("=" * 50)
+    
+    # Get the Pi's IP address
+    pi_ip = get_local_ip()
     
     # Initialize camera
     if camera_manager.start_streaming():
         print("✅ Camera streaming started")
         print("🌐 Web server starting on http://0.0.0.0:5000")
         print("📱 Access from any device on your network:")
-        print("   - Live stream: http://[PI_IP]:5000")
-        print("   - Status API: http://[PI_IP]:5000/status")
-        print("   - Capture photo: http://[PI_IP]:5000/capture")
-        print("\n💡 To find your Pi's IP: hostname -I")
+        print(f"   - Main Interface: http://{pi_ip}:5000")
+        print(f"   - Live stream: http://{pi_ip}:5000/stream")
+        print(f"   - Status API: http://{pi_ip}:5000/status")
+        print(f"   - Capture photo: http://{pi_ip}:5000/capture")
+        print(f"\n💡 Your Pi's IP address: {pi_ip}")
         print("🛑 Press Ctrl+C to stop")
         
         try:

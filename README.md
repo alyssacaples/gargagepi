@@ -72,12 +72,12 @@ sudo journalctl -u garage-monitor -f
 ## Accessing the Web Interface
 
 Once running, access the web interface at:
-- **Main interface**: `http://[PI_IP]:5000`
-- **Live stream**: `http://[PI_IP]:5000/stream`
-- **Status API**: `http://[PI_IP]:5000/status`
-- **Capture photo**: `http://[PI_IP]:5000/capture`
+- **Main interface**: `http://[YOUR_PI_IP]:5000`
+- **Live stream**: `http://[YOUR_PI_IP]:5000/stream`
+- **Status API**: `http://[YOUR_PI_IP]:5000/status`
+- **Capture photo**: `http://[YOUR_PI_IP]:5000/capture`
 
-To find your Pi's IP address:
+The application will automatically detect and display your Pi's IP address when it starts. You can also find it manually:
 ```bash
 hostname -I
 ```
@@ -154,7 +154,8 @@ sudo systemctl enable garage-monitor
 ### Network Issues
 
 1. **Can't access web interface**:
-   - Check Pi's IP: `hostname -I`
+   - The IP address is automatically displayed when the service starts
+   - You can also check Pi's IP: `hostname -I`
    - Ensure firewall allows port 5000
    - Verify service is running: `sudo systemctl status garage-monitor`
 

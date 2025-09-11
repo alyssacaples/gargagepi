@@ -16,6 +16,7 @@ import schedule
 import requests
 from datetime import datetime
 import glob
+import subprocess
 
 # Set up logging
 logging.basicConfig(
@@ -26,6 +27,106 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
+
+class PiAddressReporter:
+    def __init__(self):
+        self.last_reported_ip = None
+        self.address_file = "pi_address.json"
+        self.hostname_file = "/etc/hostname"
+        
+    def get_current_ip(self):
+        """Get current IP address"""
+        try:
+            # Try to get IP using socket method
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+            s.close()
+            return local_ip
+        except:
+            try:
+                # Fallback to hostname command
+                result = subprocess.run(['hostname', '-I'], capture_output=True, text=True)
+                if result.returncode == 0:
+                    return result.stdout.strip().split()[0]
+            except:
+                pass
+            return "127.0.0.1"
+    
+    def get_hostname(self):
+        """Get system hostname"""
+        try:
+            with open(self.hostname_file, 'r') as f:
+                return f.read().strip()
+        except:
+            return "raspberrypi"
+    
+    def report_current_ip(self):
+        """Report current IP and system info"""
+        try:
+            current_ip = self.get_current_ip()
+            hostname = self.get_hostname()
+            
+            if current_ip != self.last_reported_ip:
+                # Create address info
+                address_info = {
+                    'ip_address': current_ip,
+                    'hostname': hostname,
+                    'timestamp': datetime.now().isoformat(),
+                    'status': 'online',
+                    'port': 5000,
+                    'stream_url': f'http://{current_ip}:5000/video_feed',
+                    'web_url': f'http://{current_ip}:5000/',
+                    'hostname_url': f'http://{hostname}.local:5000/video_feed'
+                }
+                
+                # Save to file
+                with open(self.address_file, 'w') as f:
+                    json.dump(address_info, f, indent=2)
+                
+                self.last_reported_ip = current_ip
+                logging.info(f"📡 Reported IP: {current_ip} (hostname: {hostname})")
+                
+                return address_info
+            else:
+                # Update timestamp even if IP hasn't changed
+                try:
+                    with open(self.address_file, 'r') as f:
+                        address_info = json.load(f)
+                    address_info['timestamp'] = datetime.now().isoformat()
+                    address_info['status'] = 'online'
+                    
+                    with open(self.address_file, 'w') as f:
+                        json.dump(address_info, f, indent=2)
+                except:
+                    pass
+                
+                return None
+                
+        except Exception as e:
+            logging.error(f"Failed to report IP: {e}")
+            return None
+    
+    def get_address_info(self):
+        """Get current address information"""
+        try:
+            if os.path.exists(self.address_file):
+                with open(self.address_file, 'r') as f:
+                    return json.load(f)
+        except:
+            pass
+        
+        # Return current info if file doesn't exist
+        return {
+            'ip_address': self.get_current_ip(),
+            'hostname': self.get_hostname(),
+            'timestamp': datetime.now().isoformat(),
+            'status': 'online',
+            'port': 5000,
+            'stream_url': f'http://{self.get_current_ip()}:5000/video_feed',
+            'web_url': f'http://{self.get_current_ip()}:5000/',
+            'hostname_url': f'http://{self.get_hostname()}.local:5000/video_feed'
+        }
 
 class PhotoScheduler:
     def __init__(self, camera_manager):
@@ -283,6 +384,7 @@ def get_local_ip():
 app = Flask(__name__)
 camera_manager = CameraManager()
 photo_scheduler = None
+ip_reporter = None
 
 # HTML template for the stream page
 STREAM_TEMPLATE = """
@@ -635,6 +737,21 @@ def clear_test_photos():
         logging.error(f"Error clearing test photos: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/address')
+def get_address_info():
+    """Get Pi address information for auto-discovery"""
+    try:
+        global ip_reporter
+        if ip_reporter:
+            address_info = ip_reporter.get_address_info()
+            return jsonify(address_info)
+        else:
+            return jsonify({'error': 'Address reporter not initialized'}), 500
+            
+    except Exception as e:
+        logging.error(f"Error getting address info: {e}")
+        return jsonify({'error': str(e)}), 500
+
 def main():
     """Main function"""
     print("🌐 Garage Door Monitor - Complete Stream Server")
@@ -649,6 +766,25 @@ def main():
     global photo_scheduler
     photo_scheduler = PhotoScheduler(camera_manager)
     print("✅ Photo scheduler initialized")
+    
+    # Initialize IP reporter
+    global ip_reporter
+    ip_reporter = PiAddressReporter()
+    print("✅ IP reporter initialized")
+    
+    # Start IP reporting in background
+    def report_ip_periodically():
+        while True:
+            try:
+                ip_reporter.report_current_ip()
+                time.sleep(300)  # Report every 5 minutes
+            except Exception as e:
+                logging.error(f"Error in IP reporting: {e}")
+                time.sleep(60)  # Wait 1 minute on error
+    
+    ip_reporting_thread = threading.Thread(target=report_ip_periodically, daemon=True)
+    ip_reporting_thread.start()
+    print("✅ IP reporting started")
     
     # Get local IP
     local_ip = get_local_ip()

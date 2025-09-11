@@ -553,9 +553,17 @@
         
         <div class="info-section">
             <h3>🔧 Configuration</h3>
-            <p>To connect to your Raspberry Pi stream, update the stream URL below:</p>
+            <p>Connect to your Raspberry Pi stream automatically or manually:</p>
             <div class="code">
                 <strong>Stream URL:</strong> <input type="text" id="streamUrlInput" placeholder="http://your-pi-ip:5000/video_feed" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px; margin-top: 5px;">
+            </div>
+            <div style="margin: 15px 0;">
+                <button class="btn btn-primary" onclick="updateStreamUrl()">Update Stream URL</button>
+                <button class="btn btn-success" onclick="autoDiscoverPi()" id="autoDiscoverBtn">🔍 Auto-Discover Pi</button>
+                <button class="btn btn-warning" onclick="scanNetwork()" id="scanNetworkBtn">🌐 Scan Network</button>
+            </div>
+            <div id="discoveryStatus" style="margin: 10px 0; padding: 10px; border-radius: 5px; display: none;">
+                <strong>Discovery Status:</strong> <span id="discoveryStatusText"></span>
             </div>
             <p><strong>Examples:</strong></p>
             <ul>
@@ -563,7 +571,6 @@
                 <li>ngrok tunnel: <code>https://abc123.ngrok.io/video_feed</code></li>
                 <li>Cloudflare tunnel: <code>https://your-domain.com/video_feed</code></li>
             </ul>
-            <button class="btn btn-primary" onclick="updateStreamUrl()">Update Stream URL</button>
         </div>
         
         <div class="footer">
@@ -577,6 +584,277 @@
         let startTime = Date.now();
         let checkInterval;
         let currentTab = 'stream';
+        let piAddresses = [];
+        let currentPiAddress = '';
+        let isDiscovering = false;
+        
+        // Auto-discovery functions
+        function showDiscoveryStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('discoveryStatus');
+            const statusText = document.getElementById('discoveryStatusText');
+            
+            statusDiv.style.display = 'block';
+            statusText.textContent = message;
+            
+            // Set color based on type
+            statusDiv.style.backgroundColor = type === 'success' ? '#d4edda' : 
+                                            type === 'error' ? '#f8d7da' : 
+                                            type === 'warning' ? '#fff3cd' : '#e2e3e5';
+            statusDiv.style.color = type === 'success' ? '#155724' : 
+                                   type === 'error' ? '#721c24' : 
+                                   type === 'warning' ? '#856404' : '#383d41';
+        }
+        
+        function hideDiscoveryStatus() {
+            document.getElementById('discoveryStatus').style.display = 'none';
+        }
+        
+        async function testPiConnection(baseUrl) {
+            try {
+                const response = await fetch(`${baseUrl}/status`, { 
+                    method: 'HEAD',
+                    timeout: 3000 
+                });
+                return response.ok;
+            } catch (e) {
+                return false;
+            }
+        }
+        
+        async function discoverPiAddresses() {
+            if (isDiscovering) return [];
+            
+            isDiscovering = true;
+            showDiscoveryStatus('🔍 Discovering Pi addresses...', 'info');
+            
+            const discoveredAddresses = [];
+            
+            // Try common Pi hostnames
+            const commonHostnames = [
+                'raspberrypi.local',
+                'garage-pi.local',
+                'garage-camera.local',
+                'pi.local',
+                'raspberrypi',
+                'garage-pi'
+            ];
+            
+            showDiscoveryStatus('🔍 Testing hostnames...', 'info');
+            
+            for (const hostname of commonHostnames) {
+                const baseUrl = `http://${hostname}:5000`;
+                if (await testPiConnection(baseUrl)) {
+                    discoveredAddresses.push(baseUrl);
+                    console.log(`✅ Found Pi at: ${hostname}`);
+                }
+            }
+            
+            if (discoveredAddresses.length > 0) {
+                showDiscoveryStatus(`✅ Found ${discoveredAddresses.length} Pi(s) via hostname`, 'success');
+                isDiscovering = false;
+                return discoveredAddresses;
+            }
+            
+            // Try common IP ranges
+            showDiscoveryStatus('🔍 Scanning network ranges...', 'info');
+            
+            const ipRanges = [
+                '192.168.1.',
+                '192.168.0.',
+                '10.0.0.',
+                '172.16.0.'
+            ];
+            
+            for (const range of ipRanges) {
+                showDiscoveryStatus(`🔍 Scanning ${range}1-20...`, 'info');
+                
+                for (let i = 1; i <= 20; i++) {
+                    const ip = `${range}${i}`;
+                    const baseUrl = `http://${ip}:5000`;
+                    
+                    if (await testPiConnection(baseUrl)) {
+                        discoveredAddresses.push(baseUrl);
+                        console.log(`✅ Found Pi at: ${ip}`);
+                    }
+                }
+                
+                if (discoveredAddresses.length > 0) break;
+            }
+            
+            isDiscovering = false;
+            return discoveredAddresses;
+        }
+        
+        async function autoDiscoverPi() {
+            const autoBtn = document.getElementById('autoDiscoverBtn');
+            const scanBtn = document.getElementById('scanNetworkBtn');
+            
+            // Disable buttons during discovery
+            autoBtn.disabled = true;
+            scanBtn.disabled = true;
+            autoBtn.textContent = '🔍 Discovering...';
+            
+            try {
+                const addresses = await discoverPiAddresses();
+                
+                if (addresses.length > 0) {
+                    // Use the first discovered address
+                    currentPiAddress = addresses[0];
+                    streamUrl = `${currentPiAddress}/video_feed`;
+                    
+                    // Update UI
+                    document.getElementById('streamUrlInput').value = streamUrl;
+                    document.getElementById('streamUrl').textContent = streamUrl;
+                    document.getElementById('statusStreamUrl').textContent = streamUrl;
+                    
+                    // Save to localStorage
+                    localStorage.setItem('garageStreamUrl', streamUrl);
+                    
+                    // Start stream
+                    startStream();
+                    
+                    showDiscoveryStatus(`✅ Auto-connected to Pi at: ${currentPiAddress}`, 'success');
+                    console.log(`🎯 Auto-connected to Pi at: ${currentPiAddress}`);
+                } else {
+                    showDiscoveryStatus('❌ No Pi addresses discovered. Try manual configuration or network scan.', 'error');
+                }
+            } catch (error) {
+                showDiscoveryStatus(`❌ Discovery failed: ${error.message}`, 'error');
+            } finally {
+                // Re-enable buttons
+                autoBtn.disabled = false;
+                scanBtn.disabled = false;
+                autoBtn.textContent = '🔍 Auto-Discover Pi';
+            }
+        }
+        
+        async function scanNetwork() {
+            const autoBtn = document.getElementById('autoDiscoverBtn');
+            const scanBtn = document.getElementById('scanNetworkBtn');
+            
+            // Disable buttons during scan
+            autoBtn.disabled = true;
+            scanBtn.disabled = true;
+            scanBtn.textContent = '🌐 Scanning...';
+            
+            try {
+                const addresses = await discoverPiAddresses();
+                
+                if (addresses.length > 0) {
+                    showDiscoveryStatus(`✅ Found ${addresses.length} Pi(s): ${addresses.join(', ')}`, 'success');
+                    
+                    // Show selection dialog
+                    if (addresses.length > 1) {
+                        const selectedAddress = await showPiSelectionDialog(addresses);
+                        if (selectedAddress) {
+                            currentPiAddress = selectedAddress;
+                            streamUrl = `${currentPiAddress}/video_feed`;
+                            
+                            // Update UI
+                            document.getElementById('streamUrlInput').value = streamUrl;
+                            document.getElementById('streamUrl').textContent = streamUrl;
+                            document.getElementById('statusStreamUrl').textContent = streamUrl;
+                            
+                            // Save to localStorage
+                            localStorage.setItem('garageStreamUrl', streamUrl);
+                            
+                            // Start stream
+                            startStream();
+                        }
+                    } else {
+                        // Auto-connect to single discovered Pi
+                        await autoDiscoverPi();
+                    }
+                } else {
+                    showDiscoveryStatus('❌ No Pi devices found on network', 'error');
+                }
+            } catch (error) {
+                showDiscoveryStatus(`❌ Network scan failed: ${error.message}`, 'error');
+            } finally {
+                // Re-enable buttons
+                autoBtn.disabled = false;
+                scanBtn.disabled = false;
+                scanBtn.textContent = '🌐 Scan Network';
+            }
+        }
+        
+        async function showPiSelectionDialog(addresses) {
+            return new Promise((resolve) => {
+                const dialog = document.createElement('div');
+                dialog.style.cssText = `
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                    background: rgba(0,0,0,0.8); z-index: 10000; display: flex; 
+                    align-items: center; justify-content: center;
+                `;
+                
+                const content = document.createElement('div');
+                content.style.cssText = `
+                    background: white; padding: 20px; border-radius: 10px; 
+                    max-width: 400px; width: 90%;
+                `;
+                
+                content.innerHTML = `
+                    <h3>Select Pi Device</h3>
+                    <p>Multiple Pi devices found. Choose one to connect:</p>
+                    ${addresses.map((addr, i) => `
+                        <button onclick="selectPi('${addr}')" style="
+                            display: block; width: 100%; margin: 5px 0; padding: 10px; 
+                            border: 1px solid #ddd; border-radius: 5px; cursor: pointer;
+                        ">${addr}</button>
+                    `).join('')}
+                    <button onclick="cancelPiSelection()" style="
+                        display: block; width: 100%; margin: 10px 0; padding: 10px; 
+                        border: 1px solid #ccc; border-radius: 5px; cursor: pointer;
+                    ">Cancel</button>
+                `;
+                
+                dialog.appendChild(content);
+                document.body.appendChild(dialog);
+                
+                window.selectPi = (address) => {
+                    document.body.removeChild(dialog);
+                    resolve(address);
+                };
+                
+                window.cancelPiSelection = () => {
+                    document.body.removeChild(dialog);
+                    resolve(null);
+                };
+            });
+        }
+        
+        // Enhanced status checking with auto-reconnection
+        async function checkStreamStatusWithAutoReconnect() {
+            if (!streamUrl) {
+                // Try to auto-discover if no URL is set
+                await autoDiscoverPi();
+                return;
+            }
+            
+            try {
+                const statusUrl = streamUrl.replace('/video_feed', '/status');
+                const response = await fetch(statusUrl, { timeout: 5000 });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus('online', data);
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                console.log('❌ Connection lost, attempting auto-reconnect...');
+                updateStatus('offline', null);
+                
+                // Try to rediscover and reconnect
+                const addresses = await discoverPiAddresses();
+                if (addresses.length > 0) {
+                    const reconnected = await autoDiscoverPi();
+                    if (reconnected) {
+                        console.log('✅ Auto-reconnected successfully');
+                    }
+                }
+            }
+        }
         
         // Tab management
         function showTab(tabName) {
@@ -1033,6 +1311,13 @@
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadStreamUrl();
+            
+            // Try auto-discovery if no saved URL
+            if (!localStorage.getItem('garageStreamUrl')) {
+                setTimeout(() => {
+                    showDiscoveryStatus('💡 No saved Pi address. Click "Auto-Discover Pi" to find your device automatically.', 'info');
+                }, 1000);
+            }
         });
     </script>
 </body>

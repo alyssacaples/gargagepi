@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garage Door Monitor - Complete Control Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 15px 15px 0 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 0;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px 20px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: #f8f9fa;
+            color: #666;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-radius: 15px 15px 0 0;
+        }
+        
+        .tab.active {
+            background: white;
+            color: #007bff;
+            border-bottom: 3px solid #007bff;
+        }
+        
+        .tab:hover {
+            background: #e9ecef;
+        }
+        
+        .tab-content {
+            display: none;
+            background: white;
+            border-radius: 0 0 15px 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .photo-item {
+            position: relative;
+            background: #f8f9fa;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .photo-item:hover {
+            transform: translateY(-5px);
+        }
+        
+        .photo-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        
+        .photo-info {
+            padding: 10px;
+        }
+        
+        .photo-info h4 {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .photo-info p {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .photo-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-small {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-download {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-small:hover {
+            opacity: 0.8;
+        }
+        
+        .scheduler-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .scheduler-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .scheduler-panel h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .scheduler-panel .btn {
+            margin: 5px;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .status-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border-left: 4px solid #007bff;
+        }
+        
+        .status-card h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .status-card .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }
+        
+        .modal-content {
+            position: relative;
+            margin: 5% auto;
+            max-width: 90%;
+            max-height: 90%;
+        }
+        
+        .modal-content img {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+        
+        .close {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 50%;
+        }
+        
+        .close:hover {
+            background: rgba(0,0,0,0.8);
+        }
+        
+        .stream-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .stream-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .stream-image {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .stream-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .stream-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .status-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .status-value {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .status-online {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .info-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .info-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        
+        .info-section p {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        
+        .code {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border-left: 4px solid #007bff;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .stream-controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏠 Garage Door Monitor</h1>
+            <p>Remote Access Dashboard</p>
+        </div>
+        
+        <!-- Tab Navigation -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('stream')">📹 Live Stream</button>
+            <button class="tab" onclick="showTab('photos')">📸 Photo Gallery</button>
+            <button class="tab" onclick="showTab('scheduler')">⏰ Photo Scheduler</button>
+            <button class="tab" onclick="showTab('status')">📊 System Status</button>
+        </div>
+        
+        <!-- Stream Tab -->
+        <div id="stream" class="tab-content active">
+            <h2>📹 Live Stream</h2>
+            <div class="stream-container">
+                <img id="streamImage" src="" alt="Live Stream" class="stream-image">
+                <div class="stream-overlay" id="streamStatus">
+                    🔴 Connecting...
+                </div>
+            </div>
+            
+            <div class="stream-controls">
+                <button class="btn btn-primary" onclick="refreshStream()">🔄 Refresh Stream</button>
+                <button class="btn btn-success" onclick="capturePhoto()">📸 Capture Photo</button>
+            </div>
+            
+            <div id="streamInfo">
+                <p><strong>Stream URL:</strong> <span id="streamUrl">Not configured</span></p>
+                <p><strong>Last Update:</strong> <span id="lastUpdate">Never</span></p>
+            </div>
+        </div>
+        
+        <!-- Photo Gallery Tab -->
+        <div id="photos" class="tab-content">
+            <h2>📸 Photo Gallery</h2>
+            <div class="stream-controls">
+                <button class="btn btn-primary" onclick="loadPhotos()">🔄 Refresh Gallery</button>
+                <button class="btn btn-success" onclick="capturePhoto()">📸 Take New Photo</button>
+                <button class="btn btn-primary" onclick="downloadAllPhotos()">📥 Download All</button>
+            </div>
+            
+            <div class="status-grid">
+                <div class="status-card">
+                    <h4>Total Photos</h4>
+                    <div class="value" id="totalPhotos">0</div>
+                </div>
+                <div class="status-card">
+                    <h4>Photos Today</h4>
+                    <div class="value" id="photosToday">0</div>
+                </div>
+                <div class="status-card">
+                    <h4>Last Photo</h4>
+                    <div class="value" id="lastPhoto">Never</div>
+                </div>
+            </div>
+            
+            <div class="photo-gallery" id="photoGallery">
+                <!-- Photos will be loaded here -->
+            </div>
+        </div>
+        
+        <!-- Scheduler Tab -->
+        <div id="scheduler" class="tab-content">
+            <h2>⏰ Photo Scheduler</h2>
+            
+            <div class="scheduler-controls">
+                <div class="scheduler-panel">
+                    <h4>📅 Schedule Control</h4>
+                    <button class="btn btn-success" onclick="startScheduler()">▶️ Start Scheduler</button>
+                    <button class="btn btn-warning" onclick="stopScheduler()">⏹️ Stop Scheduler</button>
+                    <button class="btn btn-primary" onclick="getSchedulerStatus()">📊 Get Status</button>
+                </div>
+                
+                <div class="scheduler-panel">
+                    <h4>⚡ Quick Actions</h4>
+                    <button class="btn btn-success" onclick="capturePhoto()">📸 Take Photo Now</button>
+                    <button class="btn btn-primary" onclick="testScheduler()">🧪 Test Scheduler</button>
+                    <button class="btn btn-warning" onclick="clearTestPhotos()">🧹 Clear Test Photos</button>
+                </div>
+            </div>
+            
+            <div class="status-grid">
+                <div class="status-card">
+                    <h4>Scheduler Status</h4>
+                    <div class="value" id="schedulerStatus">Unknown</div>
+                </div>
+                <div class="status-card">
+                    <h4>Next Photo</h4>
+                    <div class="value" id="nextPhoto">Unknown</div>
+                </div>
+                <div class="status-card">
+                    <h4>Interval</h4>
+                    <div class="value" id="currentInterval">Unknown</div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h3>📋 Schedule Information</h3>
+                <p><strong>High Frequency Periods:</strong> 7:00-9:30 AM and 4:00-7:00 PM (Every 5 minutes)</p>
+                <p><strong>Low Frequency Periods:</strong> All other times (Every 15 minutes)</p>
+                <p><strong>Test Photos:</strong> 45 seconds and 90 seconds after scheduler start</p>
+            </div>
+        </div>
+        
+        <!-- Status Tab -->
+        <div id="status" class="tab-content">
+            <h2>📊 System Status</h2>
+            
+            <div class="status-grid">
+                <div class="status-card">
+                    <h4>Stream Status</h4>
+                    <div class="value" id="systemStatus">Offline</div>
+                </div>
+                <div class="status-card">
+                    <h4>Connection</h4>
+                    <div class="value" id="connectionStatus">Disconnected</div>
+                </div>
+                <div class="status-card">
+                    <h4>Last Check</h4>
+                    <div class="value" id="lastCheck">Never</div>
+                </div>
+                <div class="status-card">
+                    <h4>Uptime</h4>
+                    <div class="value" id="uptime">0s</div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <h3>🔧 System Information</h3>
+                <p><strong>Pi IP:</strong> <span id="piIp">Not connected</span></p>
+                <p><strong>Stream URL:</strong> <span id="statusStreamUrl">Not configured</span></p>
+                <p><strong>Last Update:</strong> <span id="statusLastUpdate">Never</span></p>
+            </div>
+        </div>
+        
+        <div class="info-section">
+            <h3>🔧 Configuration</h3>
+            <p>To connect to your Raspberry Pi stream, update the stream URL below:</p>
+            <div class="code">
+                <strong>Stream URL:</strong> <input type="text" id="streamUrlInput" placeholder="http://your-pi-ip:5000/video_feed" style="width: 100%; padding: 5px; border: 1px solid #ddd; border-radius: 3px; margin-top: 5px;">
+            </div>
+            <p><strong>Examples:</strong></p>
+            <ul>
+                <li>Local network: <code>http://192.168.1.100:5000/video_feed</code></li>
+                <li>ngrok tunnel: <code>https://abc123.ngrok.io/video_feed</code></li>
+                <li>Cloudflare tunnel: <code>https://your-domain.com/video_feed</code></li>
+            </ul>
+            <button class="btn btn-primary" onclick="updateStreamUrl()">Update Stream URL</button>
+        </div>
+        
+        <div class="footer">
+            <p>Garage Door Monitor - Cloud Hosted Dashboard</p>
+            <p>Built with ❤️ for remote monitoring</p>
+        </div>
+    </div>
+    
+    <script>
+        let streamUrl = '';
+        let startTime = Date.now();
+        let checkInterval;
+        let currentTab = 'stream';
+        
+        // Tab management
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+            
+            currentTab = tabName;
+            
+            // Load content based on tab
+            if (tabName === 'photos') {
+                loadPhotos();
+            } else if (tabName === 'scheduler') {
+                getSchedulerStatus();
+            } else if (tabName === 'status') {
+                checkStreamStatus();
+            }
+        }
+        
+        // Load saved stream URL
+        function loadStreamUrl() {
+            const saved = localStorage.getItem('garageStreamUrl');
+            if (saved) {
+                streamUrl = saved;
+                document.getElementById('streamUrlInput').value = saved;
+                document.getElementById('streamUrl').textContent = saved;
+                document.getElementById('statusStreamUrl').textContent = saved;
+                startStream();
+            }
+        }
+        
+        // Update stream URL
+        function updateStreamUrl() {
+            const input = document.getElementById('streamUrlInput');
+            streamUrl = input.value.trim();
+            
+            if (streamUrl) {
+                localStorage.setItem('garageStreamUrl', streamUrl);
+                document.getElementById('streamUrl').textContent = streamUrl;
+                document.getElementById('statusStreamUrl').textContent = streamUrl;
+                startStream();
+            } else {
+                alert('Please enter a valid stream URL');
+            }
+        }
+        
+        // Start stream
+        function startStream() {
+            if (!streamUrl) return;
+            
+            const img = document.getElementById('streamImage');
+            img.src = streamUrl + '?t=' + Date.now();
+            
+            // Start status checking
+            if (checkInterval) clearInterval(checkInterval);
+            checkInterval = setInterval(checkStreamStatus, 5000);
+            
+            // Update last update time
+            updateLastUpdate();
+        }
+        
+        // Check stream status
+        function checkStreamStatus() {
+            if (!streamUrl) return;
+            
+            const statusUrl = streamUrl.replace('/video_feed', '/status');
+            
+            fetch(statusUrl)
+                .then(response => response.json())
+                .then(data => {
+                    updateStatus('online', data);
+                })
+                .catch(error => {
+                    updateStatus('offline', null);
+                });
+        }
+        
+        // Update status display
+        function updateStatus(status, data) {
+            const systemStatus = document.getElementById('systemStatus');
+            const connectionStatus = document.getElementById('connectionStatus');
+            const streamStatus = document.getElementById('streamStatus');
+            const lastCheck = document.getElementById('lastCheck');
+            const uptime = document.getElementById('uptime');
+            const piIp = document.getElementById('piIp');
+            const statusLastUpdate = document.getElementById('statusLastUpdate');
+            
+            if (status === 'online') {
+                systemStatus.textContent = 'Online';
+                systemStatus.className = 'value status-online';
+                connectionStatus.textContent = 'Connected';
+                connectionStatus.className = 'value status-online';
+                streamStatus.textContent = '🟢 Live';
+                
+                if (data && data.local_ip) {
+                    piIp.textContent = data.local_ip;
+                }
+            } else {
+                systemStatus.textContent = 'Offline';
+                systemStatus.className = 'value status-offline';
+                connectionStatus.textContent = 'Disconnected';
+                connectionStatus.className = 'value status-offline';
+                streamStatus.textContent = '🔴 Offline';
+            }
+            
+            lastCheck.textContent = new Date().toLocaleTimeString();
+            statusLastUpdate.textContent = new Date().toLocaleTimeString();
+            
+            // Calculate uptime
+            const uptimeSeconds = Math.floor((Date.now() - startTime) / 1000);
+            const hours = Math.floor(uptimeSeconds / 3600);
+            const minutes = Math.floor((uptimeSeconds % 3600) / 60);
+            const seconds = uptimeSeconds % 60;
+            uptime.textContent = `${hours}h ${minutes}m ${seconds}s`;
+        }
+        
+        // Update last update time
+        function updateLastUpdate() {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+        
+        // Refresh stream
+        function refreshStream() {
+            if (!streamUrl) {
+                alert('Please configure stream URL first');
+                return;
+            }
+            
+            const img = document.getElementById('streamImage');
+            img.src = streamUrl + '?t=' + Date.now();
+            updateLastUpdate();
+        }
+        
+        // Capture photo
+        function capturePhoto() {
+            if (!streamUrl) {
+                alert('Please configure stream URL first');
+                return;
+            }
+            
+            const captureUrl = streamUrl.replace('/video_feed', '/capture');
+            
+            fetch(captureUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Photo captured: ${data.filename}`);
+                        // Refresh photos if on photos tab
+                        if (currentTab === 'photos') {
+                            loadPhotos();
+                        }
+                    } else {
+                        alert(`Failed to capture photo: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    alert('Error capturing photo: ' + error.message);
+                });
+        }
+        
+        // Load photos
+        function loadPhotos() {
+            if (!streamUrl) {
+                alert('Please configure stream URL first');
+                return;
+            }
+            
+            const photosUrl = streamUrl.replace('/video_feed', '/api/photos');
+            
+            fetch(photosUrl)
+                .then(response => response.json())
+                .then(data => {
+                    displayPhotos(data.photos || []);
+                    updatePhotoStats(data);
+                })
+                .catch(error => {
+                    console.error('Error loading photos:', error);
+                    document.getElementById('photoGallery').innerHTML = '<p>Error loading photos. Please check your connection.</p>';
+                });
+        }
+        
+        // Display photos in gallery
+        function displayPhotos(photos) {
+            const gallery = document.getElementById('photoGallery');
+            
+            if (photos.length === 0) {
+                gallery.innerHTML = '<p>No photos found. Take some photos to see them here!</p>';
+                return;
+            }
+            
+            gallery.innerHTML = photos.map(photo => `
+                <div class="photo-item">
+                    <img src="${photo.url}" alt="${photo.filename}" onclick="openPhotoModal('${photo.url}', '${photo.filename}')">
+                    <div class="photo-info">
+                        <h4>${photo.filename}</h4>
+                        <p>${new Date(photo.timestamp).toLocaleString()}</p>
+                        <div class="photo-actions">
+                            <button class="btn-small btn-download" onclick="downloadPhoto('${photo.url}', '${photo.filename}')">📥</button>
+                            <button class="btn-small btn-delete" onclick="deletePhoto('${photo.filename}')">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Update photo statistics
+        function updatePhotoStats(data) {
+            document.getElementById('totalPhotos').textContent = data.total_photos || 0;
+            document.getElementById('photosToday').textContent = data.photos_today || 0;
+            document.getElementById('lastPhoto').textContent = data.last_capture ? 
+                new Date(data.last_capture).toLocaleString() : 'Never';
+        }
+        
+        // Open photo modal
+        function openPhotoModal(url, filename) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <span class="close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                    <img src="${url}" alt="${filename}">
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+            
+            // Close modal when clicking outside
+            modal.onclick = function(e) {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            };
+        }
+        
+        // Download photo
+        function downloadPhoto(url, filename) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.click();
+        }
+        
+        // Download all photos
+        function downloadAllPhotos() {
+            if (!streamUrl) {
+                alert('Please configure stream URL first');
+                return;
+            }
+            
+            const photosUrl = streamUrl.replace('/video_feed', '/api/photos');
+            
+            fetch(photosUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const photos = data.photos || [];
+                    if (photos.length === 0) {
+                        alert('No photos to download');
+                        return;
+                    }
+                    
+                    // Download each photo
+                    photos.forEach((photo, index) => {
+                        setTimeout(() => {
+                            downloadPhoto(photo.url, photo.filename);
+                        }, index * 500); // Stagger downloads
+                    });
+                })
+                .catch(error => {
+                    alert('Error downloading photos: ' + error.message);
+                });
+        }
+        
+        // Delete photo
+        function deletePhoto(filename) {
+            if (!confirm(`Are you sure you want to delete ${filename}?`)) {
+                return;
+            }
+            
+            if (!streamUrl) {
+                alert('Please configure stream URL first');
+                return;
+            }
+            
+            const deleteUrl = streamUrl.replace('/video_feed', `/api/photos/${filename}`);
+            
+            fetch(deleteUrl, { method: 'DELETE' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Photo deleted successfully');
+                        loadPhotos(); // Refresh gallery
+                    } else {
+                        alert('Failed to delete photo: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error deleting photo: ' + error.message);
+                });
+        }
+        
+        // Scheduler functions
+        function startScheduler() {
+            if (!streamUrl) {
+                alert('Please configure stream URL first');
+                return;
+            }
+            
+            const schedulerUrl = streamUrl.replace('/video_feed', '/api/scheduler/start');
+            
+            fetch(schedulerUrl, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Scheduler started successfully');
+                        getSchedulerStatus();
+                    } else {
+                        alert('Failed to start scheduler: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error starting scheduler: ' + error.message);
+                });
+        }
+        
+        function stopScheduler() {
+            if (!streamUrl) {
+                alert('Please configure stream URL first');
+                return;
+            }
+            
+            const schedulerUrl = streamUrl.replace('/video_feed', '/api/scheduler/stop');
+            
+            fetch(schedulerUrl, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Scheduler stopped successfully');
+                        getSchedulerStatus();
+                    } else {
+                        alert('Failed to stop scheduler: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error stopping scheduler: ' + error.message);
+                });
+        }
+        
+        function getSchedulerStatus() {
+            if (!streamUrl) {
+                alert('Please configure stream URL first');
+                return;
+            }
+            
+            const schedulerUrl = streamUrl.replace('/video_feed', '/api/scheduler/status');
+            
+            fetch(schedulerUrl)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('schedulerStatus').textContent = data.is_running ? 'Running' : 'Stopped';
+                    document.getElementById('nextPhoto').textContent = data.next_photo || 'Unknown';
+                    document.getElementById('currentInterval').textContent = data.current_interval ? 
+                        `${data.current_interval} minutes` : 'Unknown';
+                })
+                .catch(error => {
+                    console.error('Error getting scheduler status:', error);
+                    document.getElementById('schedulerStatus').textContent = 'Error';
+                });
+        }
+        
+        function testScheduler() {
+            if (!streamUrl) {
+                alert('Please configure stream URL first');
+                return;
+            }
+            
+            const testUrl = streamUrl.replace('/video_feed', '/api/scheduler/test');
+            
+            fetch(testUrl, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Test photos scheduled successfully');
+                        getSchedulerStatus();
+                    } else {
+                        alert('Failed to schedule test photos: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error scheduling test photos: ' + error.message);
+                });
+        }
+        
+        function clearTestPhotos() {
+            if (!streamUrl) {
+                alert('Please configure stream URL first');
+                return;
+            }
+            
+            const clearUrl = streamUrl.replace('/video_feed', '/api/scheduler/clear-test');
+            
+            fetch(clearUrl, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Test photos cleared successfully');
+                        getSchedulerStatus();
+                    } else {
+                        alert('Failed to clear test photos: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error clearing test photos: ' + error.message);
+                });
+        }
+        
+        // Handle stream errors
+        document.getElementById('streamImage').onerror = function() {
+            this.src = streamUrl + '?t=' + Date.now();
+        };
+        
+        // Auto-refresh stream every 30 seconds
+        setInterval(function() {
+            if (streamUrl) {
+                refreshStream();
+            }
+        }, 30000);
+        
+        // Auto-refresh photos every 60 seconds when on photos tab
+        setInterval(function() {
+            if (streamUrl && currentTab === 'photos') {
+                loadPhotos();
+            }
+        }, 60000);
+        
+        // Auto-refresh scheduler status every 30 seconds when on scheduler tab
+        setInterval(function() {
+            if (streamUrl && currentTab === 'scheduler') {
+                getSchedulerStatus();
+            }
+        }, 30000);
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStreamUrl();
+        });
+    </script>
+</body>
+</html>

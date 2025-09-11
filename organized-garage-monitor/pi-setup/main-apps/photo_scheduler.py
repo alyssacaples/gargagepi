@@ -125,7 +125,8 @@ class PhotoScheduler:
                     logging.info(f"📸 Photo captured via API: {filename} (Reason: {reason})")
                     logging.info(f"📊 Total photos: {self.photo_count}")
                     
-                    return True
+                    # Return the reason for tracking test photos
+                    return reason
                 else:
                     logging.error(f"Flask app capture failed: {data.get('error', 'Unknown error')}")
                     return False
@@ -204,15 +205,18 @@ class PhotoScheduler:
                 jobs = schedule.get_jobs()
                 if jobs:
                     logging.debug(f"⏰ Checking {len(jobs)} scheduled jobs...")
+                
+                # Run pending jobs and track test photos
                 schedule.run_pending()
                 
-                # Clear test photos after they've been taken (after 2 minutes)
+                # Check if any test photos were just taken
+                # This is a simple approach - we'll clear test schedules after 2 minutes regardless
                 elapsed_time = time.time() - start_time
-                if elapsed_time > 120 and test_photos_taken < 2:
+                if elapsed_time > 120 and test_photos_taken == 0:
                     logging.info("🧹 Clearing test photo schedules after 2 minutes")
                     # Clear only test schedules, not all schedules
                     schedule.clear(tag="test")
-                    test_photos_taken = 2  # Mark as completed
+                    test_photos_taken = 1  # Mark as completed
                     logging.info("✅ Test schedules cleared, regular schedules continue")
                 
                 # Sleep for a short time to avoid busy waiting
@@ -223,6 +227,9 @@ class PhotoScheduler:
         except Exception as e:
             logging.error(f"Error in scheduler: {e}")
         finally:
+
+
+            
             self.stop_scheduler()
     
     def stop_scheduler(self):
